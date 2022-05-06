@@ -19,7 +19,7 @@
 static struct espconn serbridgeConn1; // plain bridging port
 static struct espconn serbridgeConn2; // programming port
 static esp_tcp serbridgeTcp1, serbridgeTcp2;
-static int8_t mcu_reset_pin, mcu_isp_pin;
+static int8_t mcu_reset_pin, mcu_isp_pin, mcu_boot0_pin;
 
 uint8_t in_mcu_flashing;   // for disabling slip during MCU flashing
 
@@ -121,6 +121,7 @@ telnetUnwrap(serbridgeConnData *conn, uint8_t *inBuf, int len)
           os_printf("Telnet: reset gpio%d\n", mcu_reset_pin);
 #endif
           GPIO_OUTPUT_SET(mcu_reset_pin, 0);
+          GPIO_OUTPUT_SET(mcu_boot0_pin, 0);
           os_delay_us(100L);
         }
 #ifdef SERBR_DBG
@@ -224,6 +225,7 @@ serbridgeReset()
 #ifdef SERBR_DBG
     os_printf("MCU reset gpio%d\n", mcu_reset_pin);
 #endif
+    GPIO_OUTPUT_SET(mcu_boot0_pin, 0);
     GPIO_OUTPUT_SET(mcu_reset_pin, 0);
     os_delay_us(2000L); // esp8266 needs at least 1ms reset pulse, it seems...
     GPIO_OUTPUT_SET(mcu_reset_pin, 1);
@@ -455,6 +457,7 @@ serbridgeDisconCb(void *arg)
   if (conn->conn_mode == cmPGM && mcu_reset_pin >= 0) {
     if (mcu_isp_pin >= 0) GPIO_OUTPUT_SET(mcu_isp_pin, 1);
     os_delay_us(100L);
+    GPIO_OUTPUT_SET(mcu_boot0_pin, 0);
     GPIO_OUTPUT_SET(mcu_reset_pin, 0);
     os_delay_us(100L);
     GPIO_OUTPUT_SET(mcu_reset_pin, 1);
@@ -516,6 +519,7 @@ serbridgeInitPins()
 {
   mcu_reset_pin = flashConfig.reset_pin;
   mcu_isp_pin = flashConfig.isp_pin;
+  mcu_boot0_pin = flashConfig.boot0_pin;
 #ifdef SERBR_DBG
   os_printf("Serbridge pins: reset=%d isp=%d swap=%d\n",
       mcu_reset_pin, mcu_isp_pin, flashConfig.swap_uart);
@@ -539,7 +543,10 @@ serbridgeInitPins()
 
   // set both pins to 1 before turning them on so we don't cause a reset
   if (mcu_isp_pin >= 0)   GPIO_OUTPUT_SET(mcu_isp_pin, 1);
-  if (mcu_reset_pin >= 0) GPIO_OUTPUT_SET(mcu_reset_pin, 1);
+  if (mcu_reset_pin >= 0) {
+    GPIO_OUTPUT_SET(mcu_boot0_pin, 0);
+    GPIO_OUTPUT_SET(mcu_reset_pin, 1);
+  }
   // switch pin mux to make these pins GPIO pins
   if (mcu_reset_pin >= 0) makeGpio(mcu_reset_pin);
   if (mcu_isp_pin >= 0)   makeGpio(mcu_isp_pin);

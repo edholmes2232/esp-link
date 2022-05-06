@@ -98,7 +98,9 @@ MCU_ISP_PIN         ?= 13
 # GPIO pin used for "connectivity" LED, active low
 LED_CONN_PIN        ?= 0
 # GPIO pin used for "serial activity" LED, active low
-LED_SERIAL_PIN      ?= 14
+LED_SERIAL_PIN      ?= 0
+
+MCU_BOOT0_PIN		?= 14
 
 # --------------- esp-link modules config options ---------------
 
